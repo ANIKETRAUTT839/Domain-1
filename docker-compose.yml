@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  cloud-backend:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - API_KEY=vsense_secret_api_key_12345
+    volumes:
+      - ./data:/app/data
+
+  simulator:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    command: python simulator/sensor_sim.py --device /tmp/vsensor0 --rate 2.0
+    volumes:
+      - shared-tmp:/tmp
+
+  daemon:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    command: python daemon/vsensord.py
+    depends_on:
+      - cloud-backend
+      - simulator
+    volumes:
+      - shared-tmp:/tmp
+
+volumes:
+  shared-tmp:

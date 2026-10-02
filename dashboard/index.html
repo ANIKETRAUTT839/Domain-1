@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VSense-HIL | Telemetry Engine Dashboard</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --card-bg: rgba(22, 30, 46, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --accent-purple: #7f00ff;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --status-normal: #10b981;
+            --status-warning: #f59e0b;
+            --status-critical: #ef4444;
+            --status-recovery: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(127, 0, 255, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            padding: 18px 28px;
+            border-radius: 16px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+        }
+
+        .brand-title h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-title p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .badge {
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .badge-NORMAL { background: rgba(16, 185, 129, 0.15); color: var(--status-normal); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-NORMAL .badge-indicator { background: var(--status-normal); box-shadow: 0 0 8px var(--status-normal); }
+
+        .badge-WARNING { background: rgba(245, 158, 11, 0.15); color: var(--status-warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-WARNING .badge-indicator { background: var(--status-warning); box-shadow: 0 0 8px var(--status-warning); }
+
+        .badge-CRITICAL { background: rgba(239, 68, 68, 0.15); color: var(--status-critical); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-CRITICAL .badge-indicator { background: var(--status-critical); box-shadow: 0 0 8px var(--status-critical); }
+
+        .badge-RECOVERY { background: rgba(59, 130, 246, 0.15); color: var(--status-recovery); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-RECOVERY .badge-indicator { background: var(--status-recovery); box-shadow: 0 0 8px var(--status-recovery); }
+
+        /* Grid */
+        .grid-sensors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+        }
+
+        .sensor-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .sensor-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 242, 254, 0.3);
+        }
+
+        .sensor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sensor-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .sensor-value-container {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .sensor-value {
+            font-size: 36px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+        }
+
+        .sensor-unit {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .sensor-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 10px;
+        }
+
+        /* Analytics Section */
+        .analytics-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .analytics-container { grid-template-columns: 1fr; }
+        }
+
+        .card-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+
+        /* Controls Panel */
+        .fault-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        select, button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        select option {
+            background: #111827;
+            color: #ffffff;
+        }
+
+        button.btn-inject {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+            margin-top: 6px;
+        }
+
+        button.btn-inject:hover {
+            opacity: 0.9;
+        }
+
+        /* Alerts Table */
+        .alerts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .alerts-table th, .alerts-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .alerts-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            padding: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--card-border);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">VS</div>
+            <div class="brand-title">
+                <h1>VSense-HIL Engine</h1>
+                <p>Virtual Sensor Hardware-in-the-Loop Telemetry System</p>
+            </div>
+        </div>
+
+        <div class="system-status">
+            <div id="stateBadge" class="badge badge-NORMAL">
+                <div class="badge-indicator"></div>
+                <span id="stateText">NORMAL</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 6 Sensor Cards -->
+    <div class="grid-sensors">
+        <div class="sensor-card">
+            <div class="sensor-header">
+                <span class="sensor-name">Temperature (Thermal)</span>
+                <span id="s1-status" class="badge badge-NORMAL" style="padding: 2px 8px; font-size: 10px;">OK</span>
+            </div>
+            <div class="sensor-value-container">
+                <span id="s1-val" class="sensor-value">--.--</span>
+                <span class="sensor-unit">°C</span>
+            </div>
+            <div class="sensor-footer">
+                <span>Seq: <strong id="s1-seq">0</strong></span>
+                <span>Z-Score: <strong id="s1-z">0.00</strong></span>
+            </div>
+        </div>
+
+        <div class="sensor-card">
+            <div class="sensor-header">
+                <span class="sensor-name">Humidity (Relative)</span>
+                <span id="s2-status" class="badge badge-NORMAL" style="padding: 2px 8px; font-size: 10px;">OK</span>
+            </div>
+            <div class="sensor-value-container">
+                <span id="s2-val" class="sensor-value">--.--</span>
+                <span class="sensor-unit">%</span>
+            </div>
+            <div class="sensor-footer">
+                <span>Seq: <strong id="s2-seq">0</strong></span>
+                <span>Z-Score: <strong id="s2-z">0.00</strong></span>
+            </div>
+        </div>
+
+        <div class="sensor-card">
+            <div class="sensor-header">
+                <span class="sensor-name">Barometric Pressure</span>
+                <span id="s3-status" class="badge badge-NORMAL" style="padding: 2px 8px; font-size: 10px;">OK</span>
+            </div>
+            <div class="sensor-value-container">
+                <span id="s3-val" class="sensor-value">----.--</span>
+                <span class="sensor-unit">hPa</span>
+            </div>
+            <div class="sensor-footer">
+                <span>Seq: <strong id="s3-seq">0</strong></span>
+                <span>Z-Score: <strong id="s3-z">0.00</strong></span>
+            </div>
+        </div>
+
+        <div class="sensor-card">
+            <div class="sensor-header">
+                <span class="sensor-name">Vibration (Accelerometer)</span>
+                <span id="s4-status" class="badge badge-NORMAL" style="padding: 2px 8px; font-size: 10px;">OK</span>
+            </div>
+            <div class="sensor-value-container">
+                <span id="s4-val" class="sensor-value">--.--</span>
+                <span class="sensor-unit">mm/s</span>
+            </div>
+            <div class="sensor-footer">
+                <span>Seq: <strong id="s4-seq">0</strong></span>
+                <span>Z-Score: <strong id="s4-z">0.00</strong></span>
+            </div>
+        </div>
+
+        <div class="sensor-card">
+            <div class="sensor-header">
+                <span class="sensor-name">AC Voltage</span>
+                <span id="s5-status" class="badge badge-NORMAL" style="padding: 2px 8px; font-size: 10px;">OK</span>
+            </div>
+            <div class="sensor-value-container">
+                <span id="s5-val" class="sensor-value">---.--</span>
+                <span class="sensor-unit">V</span>
+            </div>
+            <div class="sensor-footer">
+                <span>Seq: <strong id="s5-seq">0</strong></span>
+                <span>Z-Score: <strong id="s5-z">0.00</strong></span>
+            </div>
+        </div>
+
+        <div class="sensor-card">
+            <div class="sensor-header">
+                <span class="sensor-name">Load Current</span>
+                <span id="s6-status" class="badge badge-NORMAL" style="padding: 2px 8px; font-size: 10px;">OK</span>
+            </div>
+            <div class="sensor-value-container">
+                <span id="s6-val" class="sensor-value">--.--</span>
+                <span class="sensor-unit">A</span>
+            </div>
+            <div class="sensor-footer">
+                <span>Seq: <strong id="s6-seq">0</strong></span>
+                <span>Z-Score: <strong id="s6-z">0.00</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics & Fault Control -->
+    <div class="analytics-container">
+        <!-- Live Chart -->
+        <div class="card-panel">
+            <div class="panel-title">
+                <span>Real-Time Telemetry Stream</span>
+                <select id="chartSensorSelect" onchange="updateChartSource()">
+                    <option value="1">Temperature (°C)</option>
+                    <option value="2">Humidity (%)</option>
+                    <option value="3">Pressure (hPa)</option>
+                    <option value="4" selected>Vibration (mm/s)</option>
+                    <option value="5">Voltage (V)</option>
+                    <option value="6">Current (A)</option>
+                </select>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="telemetryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- HIL Fault Injection Control -->
+        <div class="card-panel">
+            <div class="panel-title">
+                <span>HIL Fault Injection Panel</span>
+            </div>
+
+            <div class="fault-grid">
+                <div class="control-group">
+                    <label>Target Sensor</label>
+                    <select id="faultSensor">
+                        <option value="1">Temperature (#1)</option>
+                        <option value="2">Humidity (#2)</option>
+                        <option value="3">Pressure (#3)</option>
+                        <option value="4">Vibration (#4)</option>
+                        <option value="5">Voltage (#5)</option>
+                        <option value="6">Current (#6)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Fault Mode</label>
+                    <select id="faultType">
+                        <option value="spike">Spike Anomaly</option>
+                        <option value="stuck">Stuck-at Signal</option>
+                        <option value="out_of_range">Out of Range</option>
+                        <option value="dropout">Signal Dropout</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Duration (Seconds)</label>
+                <select id="faultDuration">
+                    <option value="3">3 Seconds</option>
+                    <option value="5" selected>5 Seconds</option>
+                    <option value="10">10 Seconds</option>
+                </select>
+            </div>
+
+            <button class="btn-inject" onclick="triggerFault()">Inject Synthetic Fault</button>
+            <p id="faultMsg" style="font-size: 12px; color: var(--status-normal); display: none;"></p>
+
+            <div style="border-top: 1px solid var(--card-border); padding-top: 12px; margin-top: 8px;">
+                <div class="panel-title" style="font-size: 14px; margin-bottom: 8px;">Active System Alerts</div>
+                <div style="max-height: 120px; overflow-y: auto;">
+                    <table class="alerts-table">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertsBody">
+                            <tr><td colspan="2" style="color: var(--text-muted);">No active system alerts</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>VSense-HIL: Virtual Sensor Telemetry Engine | Target Architecture: Linux Kernel / C++17 / FastAPI</p>
+        <p style="margin-top: 4px; font-weight: 500; color: var(--accent-cyan);">Simulated hardware – educational project</p>
+    </footer>
+
+    <script>
+        let currentChartSensor = 4;
+        const chartCtx = document.getElementById('telemetryChart').getContext('2d');
+        
+        const telemetryChart = new Chart(chartCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Sensor Signal',
+                    borderColor: '#00f2fe',
+                    backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    data: []
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        function updateChartSource() {
+            currentChartSensor = parseInt(document.getElementById('chartSensorSelect').value);
+            fetchChartHistory();
+        }
+
+        async function fetchTelemetry() {
+            try {
+                const res = await fetch('/api/v1/telemetry/latest');
+                const data = await res.json();
+                
+                let systemState = "NORMAL";
+
+                data.telemetry.forEach(s => {
+                    const sid = s.sensor_id;
+                    const valElem = document.getElementById(`s${sid}-val`);
+                    const seqElem = document.getElementById(`s${sid}-seq`);
+                    const zElem = document.getElementById(`s${sid}-z`);
+                    const statusElem = document.getElementById(`s${sid}-status`);
+
+                    if (valElem) valElem.innerText = s.value.toFixed(2);
+                    if (seqElem) seqElem.innerText = s.seq_num;
+                    if (zElem) zElem.innerText = s.z_score.toFixed(2);
+
+                    if (s.state === "CRITICAL") systemState = "CRITICAL";
+                    else if (s.state === "WARNING" && systemState !== "CRITICAL") systemState = "WARNING";
+
+                    if (statusElem) {
+                        statusElem.className = `badge badge-${s.state}`;
+                        statusElem.innerText = s.state;
+                    }
+                });
+
+                const badgeElem = document.getElementById('stateBadge');
+                const textElem = document.getElementById('stateText');
+                badgeElem.className = `badge badge-${systemState}`;
+                textElem.innerText = systemState;
+
+            } catch (err) {
+                console.error("Telemetry fetch error:", err);
+            }
+        }
+
+        async function fetchChartHistory() {
+            try {
+                const res = await fetch(`/api/v1/telemetry/history?sensor_id=${currentChartSensor}&limit=30`);
+                const data = await res.json();
+                
+                const labels = data.history.map(h => h.timestamp.split(' ')[1] || '');
+                const values = data.history.map(h => h.value);
+
+                telemetryChart.data.labels = labels;
+                telemetryChart.data.datasets[0].data = values;
+                telemetryChart.update();
+            } catch (err) {
+                console.error("Chart history fetch error:", err);
+            }
+        }
+
+        async function fetchAlerts() {
+            try {
+                const res = await fetch('/api/v1/alerts?limit=5');
+                const data = await res.json();
+                const tbody = document.getElementById('alertsBody');
+
+                if (data.alerts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" style="color: var(--text-muted);">No active system alerts</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.alerts.map(a => `
+                    <tr>
+                        <td><span class="badge badge-${a.severity}" style="padding: 2px 6px; font-size: 10px;">${a.severity}</span></td>
+                        <td>${a.message}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Alerts fetch error:", err);
+            }
+        }
+
+        async function triggerFault() {
+            const sid = parseInt(document.getElementById('faultSensor').value);
+            const ftype = document.getElementById('faultType').value;
+            const dur = parseFloat(document.getElementById('faultDuration').value);
+
+            try {
+                const res = await fetch('/api/v1/faults/inject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': 'vsense_secret_api_key_12345' },
+                    body: JSON.stringify({ sensor_id: sid, fault_type: ftype, duration_sec: dur })
+                });
+                const data = await res.json();
+                const msgElem = document.getElementById('faultMsg');
+                msgElem.style.display = 'block';
+                msgElem.innerText = `[OK] Fault '${ftype}' injected into Sensor #${sid}`;
+                setTimeout(() => { msgElem.style.display = 'none'; }, 4000);
+            } catch (err) {
+                alert("Fault injection failed: " + err);
+            }
+        }
+
+        // Poll every 1 second
+        setInterval(fetchTelemetry, 1000);
+        setInterval(fetchChartHistory, 1000);
+        setInterval(fetchAlerts, 2000);
+
+        fetchTelemetry();
+        fetchChartHistory();
+        fetchAlerts();
+    </script>
+</body>
+</html>
