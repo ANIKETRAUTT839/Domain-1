@@ -1,0 +1,43 @@
+# Environment & Secrets
+.env
+*.env
+!.env.example
+
+# C / C++ Build artifacts
+build/
+bin/
+*.o
+*.ko
+*.mod
+*.mod.c
+*.o.d
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Node / React
+node_modules/
+dist/
+.npm
+
+# SQLite & Logs
+*.db
+*.sqlite
+*.sqlite3
+logs/
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
