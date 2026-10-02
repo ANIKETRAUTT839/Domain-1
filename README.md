@@ -7,6 +7,7 @@
 
 > **Project Type:** Individual Project  
 > **Domain:** IoT, Embedded Systems & Virtual Sensors
+> **localhost:** https://cdn.corenexis.com/f/lwuHvpXaBpt.png
 
 ---
 
